@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ranges>
 #include "vpm.h"
+#include "treecode.h"
 
 #define MYSTERY_FRACTION 0.1
 
@@ -36,7 +37,7 @@ int main() {
 #endif
 
     for (size_t t = 0; t < nt; t++) {
-        auto Derivatives = vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity);
+        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity);
         for (size_t i = 0; i < N; i++) {
             vpm::Particle& Particle = Particles[i];
             auto [dX, dY, dOmega] = Derivatives[i];

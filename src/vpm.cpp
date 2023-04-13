@@ -2,39 +2,6 @@
 #include "vpm.h"
 
 
-std::tuple<double, double> vpm::Particle::PeriodicDistanceVector(vpm::Particle Other, double DomainL) {
-    auto [thisX, thisY] = this->Position;
-    auto [otherX, otherY] = Other.Position;
-
-    double diffX = std::fmod((thisX - otherX + DomainL / 2.0), DomainL) - DomainL / 2;
-    double diffY = std::fmod((thisY - otherY + DomainL / 2.0), DomainL) - DomainL / 2;
-
-    return {diffX, diffY};
-}
-
-
-double Kernel(double Rho) {
-    return (1.0 / (2.0 * M_PI)) * (1 - exp(-Rho * Rho / 2));
-}
-
-
-double ViscousKernel(double Rho) {
-    return (1.0 / (2.0 * M_PI)) * exp(-Rho * Rho / 2);
-}
-
-
-std::tuple<double, double, double> Cross(std::tuple<double, double, double> a, std::tuple<double, double, double> b) {
-    auto [ax, ay, az] = a;
-    auto [bx, by, bz] = b;
-
-    return {
-        ay * bz - az * by,
-        az * bx - ax * bz,
-        ax * by - ay * bx
-    };
-}
-
-
 std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
         std::vector<Particle> Particles,
         double DomainL,
