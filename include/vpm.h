@@ -14,6 +14,7 @@ namespace vpm {
         Particle() : Particle({0, 0}, {0, 0}, 0) {};
 
         std::tuple<double, double> PeriodicDistanceVector(Particle Other, double DomainL);
+        std::tuple<double, double> PeriodicDistanceVector(double x, double y, double DomainL);
         std::tuple<double, double> Position;
         std::tuple<double, double> Velocity;
         double Vorticity;
@@ -25,4 +26,7 @@ namespace vpm {
             double ParticleRadius,
             double Viscosity
     );
+
+    std::tuple<double, double> CalcVelAtPoint(double x, double y, std::vector<Particle> Particles,
+            double DomainL, double ParticleRadius);
 }
