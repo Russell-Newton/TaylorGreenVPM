@@ -46,7 +46,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
 
     for (vpm::Particle& part : Particles) {
-        outputVTP << std::get<0>(part.Velocity) << " " << std::get<1>(part.Velocity) << std::endl;
+        outputVTP << part.VelocityX << " " << part.VelocityY << std::endl;
     }
 
     outputVTP << "           </DataArray>\n";
@@ -57,7 +57,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "          <DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
 
     for (vpm::Particle& part : Particles) {
-        outputVTP << std::get<0>(part.Position) << " " << std::get<1>(part.Position) << " 0.0 " << std::endl;
+        outputVTP << part.PositionX << " " << part.PositionY << " 0.0 " << std::endl;
     }
 
     outputVTP << "           </DataArray>\n";
@@ -108,7 +108,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
 int main() {
     // sim params
     double L = 2*M_PI; // meters
-    size_t Resolution = 16; // initialize particles as 64*64 square grid
+    size_t Resolution = 64; // initialize particles as 64*64 square grid
     auto ResolutionDouble = static_cast<double>(Resolution);
     double Viscosity = 1E-2; // kinematic Viscosity m^2/s
     double dt = 1E-1;
@@ -130,7 +130,7 @@ int main() {
         double u = std::cos(x) * std::sin(y);
         double v = -std::sin(x) * std::cos(y);
         double omega = -2 * std::cos(x) * std::cos(y);
-        Particles[i] = {{x, y}, {u, v}, omega * ParticleVol * MYSTERY_FRACTION};
+        Particles[i] = vpm::Particle(x, y, u, v, omega * ParticleVol * MYSTERY_FRACTION);
     }
 
     // plot
@@ -139,27 +139,27 @@ int main() {
 #endif
 
     for (size_t t = 1; t < nt; t++) {
-        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.5);
+        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.2);
         for (size_t i = 0; i < N; i++) {
             vpm::Particle& Particle = Particles[i];
             auto [dX, dY, dOmega] = Derivatives[i];
-            std::get<0>(Particle.Position) += dX * dt;
-            std::get<1>(Particle.Position) += dY * dt;
-            std::get<0>(Particle.Velocity) = dX;
-            std::get<1>(Particle.Velocity) = dY;
+            Particle.PositionX += dX * dt;
+            Particle.PositionY += dY * dt;
+            Particle.VelocityX = dX;
+            Particle.VelocityY = dY;
             Particle.Vorticity += dOmega * dt;
 
-            if (std::get<0>(Particle.Position) < 0) {
-                std::get<0>(Particle.Position) += L;
+            if (Particle.PositionX < 0) {
+                Particle.PositionX += L;
             }
-            if (std::get<1>(Particle.Position) < 0) {
-                std::get<1>(Particle.Position) += L;
+            if (Particle.PositionY < 0) {
+                Particle.PositionY += L;
             }
-            if (std::get<0>(Particle.Position) > L) {
-                std::get<0>(Particle.Position) -= L;
+            if (Particle.PositionX > L) {
+                Particle.PositionX -= L;
             }
-            if (std::get<1>(Particle.Position) > L) {
-                std::get<1>(Particle.Position) -= L;
+            if (Particle.PositionY > L) {
+                Particle.PositionY -= L;
             }
         }
 

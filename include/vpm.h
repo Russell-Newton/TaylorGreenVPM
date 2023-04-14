@@ -3,21 +3,26 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 namespace vpm {
-    class Particle {
-    public:
+    struct Particle {
+        Particle(double PositionX, double PositionY, double VelocityX, double VelocityY, double Vorticity) :
+            PositionX{PositionX}, PositionY{PositionY}, VelocityX{VelocityX}, VelocityY{VelocityY}, Vorticity{Vorticity} {};
 
-        Particle(std::tuple<double, double> Position, std::tuple<double, double> Velocity, double Vorticity) :
-            Position{std::move(Position)}, Velocity{std::move(Velocity)}, Vorticity{Vorticity} {};
+        Particle() : Particle(0, 0, 0, 0, 0) {};
 
-        Particle() : Particle({0, 0}, {0, 0}, 0) {};
-
-        std::tuple<double, double> PeriodicDistanceVector(Particle Other, double DomainL) const;
-        std::tuple<double, double> PeriodicDistanceVector(double x, double y, double DomainL) const;
-        std::tuple<double, double> Position;
-        std::tuple<double, double> Velocity;
+        void PeriodicDistanceVector(Particle Other, double DomainL, double distanceVector[2]) const;
+        void PeriodicDistanceVector(double x, double y, double DomainL, double distanceVector[2]) const;
+        double PositionX;
+        double PositionY;
+        double VelocityX;
+        double VelocityY;
         double Vorticity;
+
+        friend std::ostream& operator<<(std::ostream& os, const Particle& part) {
+            return os << part.PositionX << " " << part.PositionY << " " << part.VelocityX << " " << part.VelocityY << " " << part.Vorticity;
+        }
     };
 
     std::vector<std::tuple<double, double, double>> CalcDerivative(
@@ -31,14 +36,14 @@ namespace vpm {
             double DomainL, double ParticleRadius);
 }
 
-inline std::tuple<double, double> vpm::Particle::PeriodicDistanceVector(vpm::Particle Other, double DomainL) const {
-    auto [thisX, thisY] = this->Position;
-    auto [otherX, otherY] = Other.Position;
+inline void vpm::Particle::PeriodicDistanceVector(vpm::Particle Other, double DomainL, double distanceVector[2]) const {
+    double thisX = this->PositionX;
+    double thisY = this->PositionY;
+    double otherX = Other.PositionX;
+    double otherY = Other.PositionY;
 
-    double diffX = std::fmod((thisX - otherX + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
-    double diffY = std::fmod((thisY - otherY + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
-
-    return {diffX, diffY};
+    distanceVector[0] = std::fmod((thisX - otherX + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
+    distanceVector[1] = std::fmod((thisY - otherY + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
 }
 
 
@@ -63,11 +68,10 @@ inline std::tuple<double, double, double> Cross(std::tuple<double, double, doubl
     };
 }
 
-inline std::tuple<double, double> vpm::Particle::PeriodicDistanceVector(double otherX, double otherY, double DomainL) const {
-    auto [thisX, thisY] = this->Position;
+inline void vpm::Particle::PeriodicDistanceVector(double otherX, double otherY, double DomainL, double distanceVector[2]) const {
+    double thisX = this->PositionX;
+    double thisY = this->PositionY;
 
-    double diffX = std::fmod((thisX - otherX + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
-    double diffY = std::fmod((thisY - otherY + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
-
-    return {diffX, diffY};
+    distanceVector[0] = std::fmod((thisX - otherX + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
+    distanceVector[1] = std::fmod((thisY - otherY + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
 }

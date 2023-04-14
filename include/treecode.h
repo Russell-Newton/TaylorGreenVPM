@@ -19,7 +19,7 @@ namespace vpm {
 
         virtual ~QuadTreeCodeNode();
 
-        void build(const std::vector<Particle>& particles, double _size);
+        void build(const std::vector<Particle>& particles, double _size, double _centerX, double _centerY);
     };
 
     std::vector<std::tuple<double, double, double>> CalcDerivativeTreeCode(

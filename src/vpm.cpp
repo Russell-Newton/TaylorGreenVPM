@@ -19,13 +19,15 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
             if (i == j) continue;
             vpm::Particle OtherParticle = Particles[j];
 
-            auto [PeriodicDistanceX, PeriodicDistanceY] = ThisParticle.PeriodicDistanceVector(OtherParticle, DomainL);
-            double PeriodicDist = sqrt(PeriodicDistanceX * PeriodicDistanceX + PeriodicDistanceY * PeriodicDistanceY);
-            double Rho = PeriodicDist / ParticleRadius;
+            double periodicDistance[2];
+            ThisParticle.PeriodicDistanceVector(OtherParticle, DomainL, periodicDistance);
+            double periodicDist = sqrt(periodicDistance[0] * periodicDistance[0] + periodicDistance[1] * periodicDistance[1]);
+
+            double Rho = periodicDist / ParticleRadius;
 
             std::tuple<double, double, double> Vector1 = {
-                    Kernel(Rho) * PeriodicDistanceX / (PeriodicDist * PeriodicDist),
-                    Kernel(Rho) * PeriodicDistanceY / (PeriodicDist * PeriodicDist),
+                    Kernel(Rho) * periodicDistance[0] / (periodicDist * periodicDist),
+                    Kernel(Rho) * periodicDistance[1] / (periodicDist * periodicDist),
                     0
             };
             auto [ResultX, ResultY, _] = Cross(Vector1, {0, 0, OtherParticle.Vorticity});
@@ -50,9 +52,10 @@ std::tuple<double, double> vpm::CalcVelAtPoint(double x, double y, std::vector<P
 
     for (size_t j = 0; j < N; j++) {
 
-        auto [PeriodicDistanceX, PeriodicDistanceY] = Particles[j].PeriodicDistanceVector(x, y, DomainL);
-        PeriodicDistanceX = -PeriodicDistanceX;
-        PeriodicDistanceY = -PeriodicDistanceY;
+        double periodicDistance[2];
+        Particles[j].PeriodicDistanceVector(x, y, DomainL, periodicDistance);
+        double PeriodicDistanceX = -periodicDistance[0];
+        double PeriodicDistanceY = -periodicDistance[1];
         double PeriodicDist = sqrt(PeriodicDistanceX * PeriodicDistanceX + PeriodicDistanceY * PeriodicDistanceY);
         if (PeriodicDist < 1E-10)
             continue;
