@@ -2,9 +2,108 @@
 #include <iostream>
 #include <ranges>
 #include "vpm.h"
+#include <fstream>
 #include "treecode.h"
 
 #define MYSTERY_FRACTION 0.1
+#define PLOT 1
+
+void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, double ParticleRadius, size_t plotResolution) {
+
+    std::ofstream outputVTK;
+    outputVTK.open("vtk_out/vel_"+std::to_string(timeStep)+".vti");
+
+    outputVTK << "<VTKFile type=\"ImageData\" version=\"2.2\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+    outputVTK << " <ImageData WholeExtent=\"0 " << plotResolution << " 0 " << plotResolution << " 0 0\" Origin=\"0 0 0\" Spacing=\"" << L/plotResolution << " " << L/plotResolution << " " << L/plotResolution << "\">\n";
+    outputVTK << "  <Piece Extent=\"0 " << plotResolution << " 0 " << plotResolution << " 0 0\">\n";
+    outputVTK << "      <PointData>\n";
+    outputVTK << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
+
+    for (int iY = 0; iY <= plotResolution; iY++)
+        for (int iX = 0; iX <= plotResolution; iX++)
+        {
+            double xPoint = iX * L/plotResolution;
+            double yPoint = iY * L/plotResolution;
+            std::tuple<double, double> velAtPoint = vpm::CalcVelAtPoint(xPoint, yPoint, Particles, L, ParticleRadius);
+            outputVTK <<  std::get<0>(velAtPoint) << " " << std::get<1>(velAtPoint) << std::endl;
+        }
+
+    outputVTK << "           </DataArray>\n";
+    outputVTK << "      </PointData>\n";
+    outputVTK << "      <CellData>\n";
+    outputVTK << "      </CellData>\n";
+    outputVTK << "  </Piece>\n";
+    outputVTK << " </ImageData>\n";
+    outputVTK << "</VTKFile>\n";
+
+    std::ofstream outputVTP;
+    outputVTP.open("vtk_out/particles_"+std::to_string(timeStep)+".vtp");
+
+    outputVTP << "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+    outputVTP << " <PolyData>\n";
+    outputVTP << "  <Piece NumberOfPoints=\"" << Particles.size() << "\" NumberOfVerts=\"" << Particles.size() << "\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n"; 
+    outputVTP << "      <PointData>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
+
+    for (vpm::Particle& part : Particles) {
+        outputVTP << std::get<0>(part.Velocity) << " " << std::get<1>(part.Velocity) << std::endl;
+    }
+
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </PointData>\n";
+    outputVTP << "      <CellData>\n";
+    outputVTP << "      </CellData>\n";
+    outputVTP << "      <Points>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
+
+    for (vpm::Particle& part : Particles) {
+        outputVTP << std::get<0>(part.Position) << " " << std::get<1>(part.Position) << " 0.0 " << std::endl;
+    }
+
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </Points>\n";
+
+    outputVTP << "      <Verts>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
+
+    for (int i = 0; i < Particles.size(); i++) {
+        outputVTP << i << " " << std::endl;
+    }
+
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"" << Particles.size() << "\" RangeMax=\"" << Particles.size() << "\">\n";
+
+    for (int i = 0; i < Particles.size(); i++) {
+        outputVTP << i+1 << " " << std::endl;
+    }
+
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </Verts>\n";
+
+    outputVTP << "      <Lines>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </Lines>\n";
+
+    outputVTP << "      <Strips>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </Strips>\n";
+
+    outputVTP << "      <Polys>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
+    outputVTP << "           </DataArray>\n";
+    outputVTP << "      </Polys>\n";
+    outputVTP << "  </Piece>\n";
+    outputVTP << " </PolyData>\n";
+    outputVTP << "</VTKFile>\n";
+}
 
 int main() {
     // sim params
@@ -21,6 +120,9 @@ int main() {
 
     std::vector<vpm::Particle> Particles(N);
 
+    // plot params
+    size_t PlotResolution = 16;
+
     // Initialize Particles
     for (size_t i = 0; i < N; i++) {
         double x = static_cast<double>(i % Resolution) * ParticleRad / 2.0 + ParticleRad / 4.0;
@@ -33,7 +135,7 @@ int main() {
 
     // plot
 #ifdef PLOT
-    plotField(Particles, L, 0.5);
+    plotField(0, Particles, L, ParticleRad, PlotResolution);
 #endif
 
     for (size_t t = 0; t < nt; t++) {
@@ -63,7 +165,7 @@ int main() {
 
         std::cout << t << std::endl;
 #ifdef PLOT
-        plotField(Particles, L, 0.5);
+        plotField(t, Particles, L, 0.5, PlotResolution);
 #endif
     }
 }
