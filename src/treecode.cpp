@@ -30,9 +30,11 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivativeTreeCode(
             // ignore empty nodes
             if (checking->isEmpty) continue;
 
+
             // explore further if needed
             auto [periodicDistanceX, periodicDistanceY] = thisParticle.PeriodicDistanceVector(checking->particle, DomainL);
             double periodicDist = sqrt(periodicDistanceX * periodicDistanceX + periodicDistanceY * periodicDistanceY);
+            if (checking->isLeaf && periodicDist <= 1e-10) continue;
             if (!checking->isLeaf && checking->size / periodicDist >= OpeningAngle) {
                 toCheck.push(checking->q1Child);
                 toCheck.push(checking->q2Child);

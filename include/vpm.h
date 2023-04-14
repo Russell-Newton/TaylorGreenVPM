@@ -35,8 +35,8 @@ inline std::tuple<double, double> vpm::Particle::PeriodicDistanceVector(vpm::Par
     auto [thisX, thisY] = this->Position;
     auto [otherX, otherY] = Other.Position;
 
-    double diffX = std::fmod((thisX - otherX + DomainL / 2.0), DomainL) - DomainL / 2;
-    double diffY = std::fmod((thisY - otherY + DomainL / 2.0), DomainL) - DomainL / 2;
+    double diffX = std::fmod((thisX - otherX + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
+    double diffY = std::fmod((thisY - otherY + DomainL / 2.0) + DomainL, DomainL) - DomainL / 2;
 
     return {diffX, diffY};
 }

@@ -138,8 +138,8 @@ int main() {
     plotField(0, Particles, L, ParticleRad, PlotResolution);
 #endif
 
-    for (size_t t = 0; t < nt; t++) {
-        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity);
+    for (size_t t = 1; t < nt; t++) {
+        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.5);
         for (size_t i = 0; i < N; i++) {
             vpm::Particle& Particle = Particles[i];
             auto [dX, dY, dOmega] = Derivatives[i];
