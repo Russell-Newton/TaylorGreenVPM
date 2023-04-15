@@ -139,7 +139,7 @@ int main() {
 #endif
 
     for (size_t t = 1; t < nt; t++) {
-        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.2);
+        auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.2, true);
         for (size_t i = 0; i < N; i++) {
             vpm::Particle& Particle = Particles[i];
             auto [dX, dY, dOmega] = Derivatives[i];
