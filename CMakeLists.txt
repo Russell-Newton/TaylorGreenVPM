@@ -8,3 +8,6 @@ add_subdirectory(src)
 
 add_executable(TaylorGreenVPM main.cpp)
 target_link_libraries(TaylorGreenVPM PUBLIC vpm)
+
+add_executable(TaylorGreenVPMValidation validation.cpp)
+target_link_libraries(TaylorGreenVPMValidation PUBLIC vpm)
