@@ -32,6 +32,7 @@ namespace vpm {
             double DomainL,
             double ParticleRadius,
             double Viscosity,
-            double OpeningAngle = 0.5
+            double OpeningAngle = 0.5,
+            bool printTime = false
     );
 }

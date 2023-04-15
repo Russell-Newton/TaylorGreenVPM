@@ -29,7 +29,8 @@ namespace vpm {
             std::vector<Particle> Particles,
             double DomainL,
             double ParticleRadius,
-            double Viscosity
+            double Viscosity,
+            bool printTime = false
     );
 
     std::tuple<double, double> CalcVelAtPoint(double x, double y, std::vector<Particle> Particles,

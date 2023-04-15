@@ -1,17 +1,21 @@
 #include <cmath>
 #include "vpm.h"
 #include <iostream>
+#include <ctime>
 
 
 std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
         std::vector<Particle> Particles,
         double DomainL,
         double ParticleRadius,
-        double Viscosity) {
+        double Viscosity,
+        bool printTime) {
     size_t N = Particles.size();
     std::vector<std::tuple<double, double, double>> Out(N, std::tuple<double, double, double>(0, 0, 0));
     double ParticleRadius2 = ParticleRadius * ParticleRadius;
     double ParticleVol = ParticleRadius2 * M_PI;
+
+    clock_t start = clock();
 
     for (size_t i = 0; i < N; i++) {
         vpm::Particle ThisParticle = Particles[i];
@@ -36,6 +40,10 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
             std::get<2>(Out[i]) += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel(Rho) * ParticleVol * (OtherParticle.Vorticity - ThisParticle.Vorticity);
         }
     }
+
+    clock_t end = clock();
+
+    if (printTime) std::cout << "Time this step: " << static_cast<double>(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
 
     return Out;
 }

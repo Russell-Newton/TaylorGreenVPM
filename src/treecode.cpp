@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stack>
 #include <cstdio>
+#include <ctime>
 #include "treecode.h"
 #include <iostream>
 
@@ -9,7 +10,8 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivativeTreeCode(
             double DomainL,
             double ParticleRadius,
             double Viscosity,
-            double OpeningAngle
+            double OpeningAngle,
+            bool printTime
     ) {
     size_t N = Particles.size();
     std::vector<std::tuple<double, double, double>> Out(N, std::tuple<double, double, double>(0, 0, 0));
@@ -24,6 +26,8 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivativeTreeCode(
 
     std::vector<vpm::QuadTreeCodeNode> treeAsVec = std::vector<vpm::QuadTreeCodeNode>(tree.begin(), tree.end());
 
+    clock_t start = clock();
+
     for (size_t i = 0; i < N; i++) {
         vpm::Particle thisParticle = Particles[i];
         // get contribution from tree
@@ -33,7 +37,6 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivativeTreeCode(
         while (!toCheck.empty()) {
             QuadTreeCodeNode checking = treeAsVec[toCheck.top()];
             toCheck.pop();
-            // std::cout << i << " " << checking << std::endl;
 
             // ignore empty nodes
             if (checking.isEmpty) continue;
@@ -65,6 +68,10 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivativeTreeCode(
             std::get<2>(Out[i]) += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel(Rho) * ParticleVol * (checking.particle.Vorticity - thisParticle.Vorticity);
         }
     }
+
+    clock_t end = clock();
+
+    if (printTime) std::cout << "Time this step: " << static_cast<double>(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
 
     return Out;
 }
