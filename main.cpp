@@ -5,20 +5,23 @@
 #include <cmath>
 
 #define MYSTERY_FRACTION 0.1
-#define PLOT 0
+#define PLOT 1
 
 
 void plotField(int timeStep, vpm::Particle* Particles, double L, double ParticleRadius, int N,  size_t plotResolution) {
 
-/*    
-    std::ofstream outputVTK;
-    outputVTK.open("vtk_out/vel_"+std::to_string(timeStep)+".vti");
+    
+    FILE* fp;
+    
+    std::string s1 = "vtk_out/vel_"+ std::to_string(timeStep)+ ".vti";
+    fp = fopen(s1.c_str(), "w"); 
 
-    outputVTK << "<VTKFile type=\"ImageData\" version=\"2.2\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
-    outputVTK << " <ImageData WholeExtent=\"0 " << plotResolution << " 0 " << plotResolution << " 0 0\" Origin=\"0 0 0\" Spacing=\"" << L/plotResolution << " " << L/plotResolution << " " << L/plotResolution << "\">\n";
-    outputVTK << "  <Piece Extent=\"0 " << plotResolution << " 0 " << plotResolution << " 0 0\">\n";
-    outputVTK << "      <PointData>\n";
-    outputVTK << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
+    fprintf(fp,"<VTKFile type=\"ImageData\" version=\"2.2\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+    fprintf(fp," <ImageData WholeExtent=\"0 %d 0 %d 0 0\" Origin=\"0 0 0\" Spacing=\" %f %f %f\">\n", plotResolution, plotResolution, L/plotResolution, L/plotResolution, L/plotResolution);
+
+    fprintf(fp, "  <Piece Extent=\"0 %d 0 %d 0 0\">\n", plotResolution, plotResolution);
+    fprintf(fp,"      <PointData>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n");
 
     for (int iY = 0; iY <= plotResolution; iY++)
         for (int iX = 0; iX <= plotResolution; iX++)
@@ -26,97 +29,100 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
             double xPoint = iX * L/plotResolution;
             double yPoint = iY * L/plotResolution;
             std::tuple<double, double> velAtPoint = vpm::CalcVelAtPoint(xPoint, yPoint, Particles, L, ParticleRadius, N);
-            outputVTK <<  std::get<0>(velAtPoint) << " " << std::get<1>(velAtPoint) << std::endl;
+            fprintf(fp, "%f %f\n", std::get<0>(velAtPoint), std::get<1>(velAtPoint));
         }
 
-    outputVTK << "           </DataArray>\n";
-    outputVTK << "      </PointData>\n";
-    outputVTK << "      <CellData>\n";
-    outputVTK << "      </CellData>\n";
-    outputVTK << "  </Piece>\n";
-    outputVTK << " </ImageData>\n";
-    outputVTK << "</VTKFile>\n";
+    fprintf(fp, "           </DataArray>\n");
+    fprintf(fp,  "      </PointData>\n");
+    fprintf(fp, "      <CellData>\n");
+    fprintf(fp, "      </CellData>\n");
+    fprintf(fp, "  </Piece>\n");
+    fprintf(fp, " </ImageData>\n");
+    fprintf(fp, "</VTKFile>\n");
 
-    outputVTK.close();
+    fclose(fp);
 
+    std::string s2 = "vtk_out/particles_"+std::to_string(timeStep)+".vtp";
+    fp = fopen(s2.c_str(), "w");
 
-    std::ofstream outputVTP;
-    outputVTP.open("vtk_out/particles_"+std::to_string(timeStep)+".vtp");
-
-    outputVTP << "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
-    outputVTP << " <PolyData>\n";
-    outputVTP << "  <Piece NumberOfPoints=\"" << N << "\" NumberOfVerts=\"" << N << "\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n"; 
-    outputVTP << "      <PointData>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
-
-    for (int i = 0; i < N; i++) {
-        vpm::Particle part = Particles[i];
-        outputVTP << std::get<0>(part.Velocity) << " " << std::get<1>(part.Velocity) << std::endl;
-    }
-
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </PointData>\n";
-    outputVTP << "      <CellData>\n";
-    outputVTP << "      </CellData>\n";
-    outputVTP << "      <Points>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
+    fprintf(fp,"<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+    fprintf(fp," <PolyData>\n");
+    fprintf(fp,"  <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"%d\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n", N, N); 
+    fprintf(fp,"      <PointData>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n");
 
     for (int i = 0; i < N; i++) {
         vpm::Particle part = Particles[i];
-        outputVTP << std::get<0>(part.Position) << " " << std::get<1>(part.Position) << " 0.0 " << std::endl;
-    }
+         fprintf(fp,"%f %f 0.0\n", std::get<0>(part.Velocity) ,std::get<1>(part.Velocity));
+   }
 
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </Points>\n";
-
-    outputVTP << "      <Verts>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
-
-    for (int i = 0; i < N; i++) {
-        outputVTP << i << " " << std::endl;
-    }
-
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"" << N << "\" RangeMax=\"" << N << "\">\n";
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </PointData>\n");
+    fprintf(fp,"      <CellData>\n");
+    fprintf(fp,"      </CellData>\n");
+    fprintf(fp,"      <Points>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n");
 
     for (int i = 0; i < N; i++) {
-        outputVTP << i+1 << " " << std::endl;
+        vpm::Particle part = Particles[i];
+        fprintf(fp,"%f %f 0.0\n", std::get<0>(part.Position) ,std::get<1>(part.Position));
+
     }
 
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </Verts>\n";
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </Points>\n");
 
-    outputVTP << "      <Lines>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </Lines>\n";
+    fprintf(fp,"      <Verts>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n");
 
-    outputVTP << "      <Strips>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </Strips>\n";
+    for (int i = 0; i < N; i++) {
+        fprintf(fp,"%d\n", i);
+    }
 
-    outputVTP << "      <Polys>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n";
-    outputVTP << "           </DataArray>\n";
-    outputVTP << "      </Polys>\n";
-    outputVTP << "  </Piece>\n";
-    outputVTP << " </PolyData>\n";
-    outputVTP << "</VTKFile>\n";
-*/
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"%d\" RangeMax=\"%d\">\n", N, N);
+
+    for (int i = 0; i < N; i++) {
+        fprintf(fp,"%d\n", i+1);
+    }
+
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </Verts>\n");
+
+    fprintf(fp,"      <Lines>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </Lines>\n");
+
+    fprintf(fp,"      <Strips>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </Strips>\n");
+
+    fprintf(fp,"      <Polys>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
+    fprintf(fp,"           </DataArray>\n");
+    fprintf(fp,"      </Polys>\n");
+    fprintf(fp,"  </Piece>\n");
+    fprintf(fp," </PolyData>\n");
+    fprintf(fp,"</VTKFile>\n");
+
+    fclose(fp);
+    
+
     
 }
 
 
 int main() {
     // sim params
-    double L = 2*M_PI; // meters
+    double L = 2*3.14; // meters
     size_t Resolution = 16; // initialize particles as 64*64 square grid
     auto ResolutionDouble = static_cast<double>(Resolution);
     double Viscosity = 1E-2; // kinematic Viscosity m^2/s
@@ -126,12 +132,12 @@ int main() {
     int N = Resolution * Resolution;
 
     double ParticleRad = L / ResolutionDouble * 2;
-    double ParticleVol = M_PI * ParticleRad * ParticleRad;
+    double ParticleVol = 3.14 * ParticleRad * ParticleRad;
 
 
     #pragma acc enter data copyin(L, Viscosity, ParticleRad, dt, N)
 
-    
+   
     
     vpm::Particle Particles[N];
     #pragma acc enter data create(Particles[0:N])
@@ -140,7 +146,7 @@ int main() {
     #pragma acc enter data create(Derivatives[0:N])
 
     // plot params
-   //size_t PlotResolution = 16;
+   size_t PlotResolution = 16;
 
     // Initialize Particles
     for (size_t i = 0; i < N; i++) {
@@ -155,21 +161,27 @@ int main() {
     #pragma acc update device(Particles[0:N])
     #pragma acc update device(Derivatives[0:N])
 
+    
     // plot
 
 #ifdef PLOT
-//    plotField(0, Particles, L, ParticleRad, N, PlotResolution);
+    plotField(0, Particles, L, ParticleRad, N, PlotResolution);
 #endif
 
 
     for (size_t t = 1; t < nt; t++) {
-        
+
         vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity, N, Derivatives);
 
-        #pragma acc parallel loop gang vector default(present) private(dX, dY, dOmega)
-        for (size_t i = 0; i < N; i++) {
 
-            std::make_tuple(dX, dY, dOmega) = Derivatives[i];
+        
+        #pragma acc parallel loop gang vector default(present) private(dX, dY, dOmega)
+        for (int i = 0; i < N; i++) {
+
+            dX = std::get<0>(Derivatives[i]);
+            dY = std::get<1>(Derivatives[i]);
+            dOmega = std::get<2>(Derivatives[i]);
+
             std::get<0>(Particles[i].Position) += dX * dt;
             std::get<1>(Particles[i].Position) += dY * dt;
             std::get<0>(Particles[i].Velocity) = dX;
@@ -189,14 +201,16 @@ int main() {
                 std::get<1>(Particles[i].Position) -= L;
             }
         }
+        
+
 
         std::cout << t << std::endl;
-
+        
         #pragma acc update host(Particles[0:N])
 
 
 #ifdef PLOT
-//        plotField(t, Particles, L, 0.5, N,  PlotResolution);
+       plotField(t, Particles, L, 0.5, N,  PlotResolution);
 #endif
     }
 

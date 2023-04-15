@@ -66,36 +66,57 @@ void vpm::CalcDerivative(
     double Rho;
     vpm::Particle ThisParticle, OtherParticle;
     std::tuple<double, double, double> Vector1;
-    double ResultX, ResultY;
+    double ResultX, ResultY, Xsum, Ysum, Vorsum;
 
+    
 
-#pragma acc parallel loop gang vector collapse(2) default(present) private( ThisParticle, OtherParticle, Vector1, PeriodicDistanceX, PeriodicDistanceY)
-    for (size_t i = 0; i < N; i++) {     
+#pragma acc parallel loop gang default(present) private( ThisParticle)
+    for (size_t i = 0; i < N; i++) {
+        Xsum = 0.0;
+        Ysum = 0.0;
+        Vorsum = 0.0;   
+        ThisParticle = Particles[i]; 
+#pragma acc loop vector default(present) private(OtherParticle, Vector1, PeriodicDistanceX, PeriodicDistanceY) reduction(+:Xsum) reduction(+:Ysum) reduction(+:Vorsum)
         for (size_t j = 0; j < N; j++) {
             
-
             if (i == j) continue;
+   
             
-            ThisParticle = Particles[i];
             OtherParticle = Particles[j];
 
-            std::make_tuple(PeriodicDistanceX, PeriodicDistanceY) = ThisParticle.PeriodicDistanceVector(OtherParticle, DomainL);
+            auto PerTuple = ThisParticle.PeriodicDistanceVector(OtherParticle, DomainL);
+            PeriodicDistanceX = std::get<0>(PerTuple);
+            PeriodicDistanceY = std::get<1>(PerTuple);
+
+ 
             PeriodicDist = sqrt(PeriodicDistanceX * PeriodicDistanceX + PeriodicDistanceY * PeriodicDistanceY);
             Rho = PeriodicDist / ParticleRadius;
+
 
             Vector1 = std::make_tuple(
                     Kernel(Rho) * PeriodicDistanceX / (PeriodicDist * PeriodicDist),
                     Kernel(Rho) * PeriodicDistanceY / (PeriodicDist * PeriodicDist),
                     0
             );
-            std::make_tuple(ResultX, ResultY, 0.0) = Cross(Vector1, std::make_tuple(0, 0, OtherParticle.Vorticity));
-            std::get<0>(Out[i]) -= ResultX;
-            std::get<1>(Out[i]) -= ResultY;
-            std::get<2>(Out[i]) += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel(Rho) * ParticleVol * (OtherParticle.Vorticity - ThisParticle.Vorticity);
+
+            auto ResTuple = Cross(Vector1, std::make_tuple(0, 0, OtherParticle.Vorticity));
+            
+            ResultX = std::get<0>(ResTuple);
+            ResultY = std::get<1>(ResTuple);          
+  
+
+            Xsum += ResultX;
+            Ysum += ResultY;
+            Vorsum += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel(Rho) * ParticleVol * (OtherParticle.Vorticity - ThisParticle.Vorticity);
         }
+        std::get<0>(Out[i]) = -Xsum;
+        std::get<1>(Out[i]) = -Ysum;
+        std::get<2>(Out[i]) = Vorsum;
     }
 
+
     return ;
+    
 }
 
 std::tuple<double, double> vpm::CalcVelAtPoint(double x, double y, Particle* Particles,
