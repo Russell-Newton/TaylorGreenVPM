@@ -1,12 +1,13 @@
 #include <cmath>
 #include <iostream>
-#include <ranges>
 #include "vpm.h"
 #include <fstream>
+#include <cmath>
 
 #define MYSTERY_FRACTION 0.1
-#define PLOT 1
+#define PLOT 0
 
+/*
 void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, double ParticleRadius, size_t plotResolution) {
 
     std::ofstream outputVTK;
@@ -103,6 +104,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << " </PolyData>\n";
     outputVTP << "</VTKFile>\n";
 }
+*/
 
 int main() {
     // sim params
@@ -113,11 +115,14 @@ int main() {
     double dt = 1E-1;
     size_t nt = 100;
 
+    #pragma acc enter data copyin(L, Viscosity)
+
     size_t N = Resolution * Resolution;
     double ParticleRad = L / ResolutionDouble * 2;
     double ParticleVol = M_PI * ParticleRad * ParticleRad;
-
-    std::vector<vpm::Particle> Particles(N);
+    
+    vpm::Particle Particles[N];
+    #pragma acc enter data create(Particles[0:N])
 
     // plot params
     size_t PlotResolution = 16;
@@ -129,16 +134,20 @@ int main() {
         double u = std::cos(x) * std::sin(y);
         double v = -std::sin(x) * std::cos(y);
         double omega = -2 * std::cos(x) * std::cos(y);
-        Particles[i] = {{x, y}, {u, v}, omega * ParticleVol * MYSTERY_FRACTION};
+        Particles[i] = {std::make_tuple(x, y), std::make_tuple(u, v), omega * ParticleVol * MYSTERY_FRACTION};
     }
+    #pragma acc update device(Particles[0:N])
 
     // plot
+
 #ifdef PLOT
-    plotField(0, Particles, L, ParticleRad, PlotResolution);
+//    plotField(0, Particles, L, ParticleRad, PlotResolution);
 #endif
+
 
     for (size_t t = 1; t < nt; t++) {
         auto Derivatives = vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity);
+
         for (size_t i = 0; i < N; i++) {
             vpm::Particle& Particle = Particles[i];
             auto [dX, dY, dOmega] = Derivatives[i];
@@ -163,8 +172,14 @@ int main() {
         }
 
         std::cout << t << std::endl;
+
+        #pragma acc update host(Particles[0:N])
+
+
 #ifdef PLOT
-        plotField(t, Particles, L, 0.5, PlotResolution);
+//        plotField(t, Particles, L, 0.5, PlotResolution);
 #endif
     }
+
+    #pragma acc exit data delete(Particles[0:N])
 }
