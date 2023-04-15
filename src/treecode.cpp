@@ -128,11 +128,6 @@ void vpm::QuadTreeCodeNode::build(const std::vector<Particle>& particles, double
     q4ChildIdx = tree.size();
     tree.push_back({});
     tree.back().build(particlesQ4, subSize, _centerX + subCenterOffset, _centerY - subCenterOffset, tree);
-
-    // tree[q1ChildIdx].build(particlesQ1, subSize, _centerX + subCenterOffset, _centerY + subCenterOffset, tree);
-    // tree[q2ChildIdx].build(particlesQ2, subSize, _centerX - subCenterOffset, _centerY + subCenterOffset, tree);
-    // tree[q3ChildIdx].build(particlesQ3, subSize, _centerX - subCenterOffset, _centerY - subCenterOffset, tree);
-    // tree[q4ChildIdx].build(particlesQ4, subSize, _centerX + subCenterOffset, _centerY - subCenterOffset, tree);
 }
 
 vpm::QuadTreeCodeNode::~QuadTreeCodeNode() {
