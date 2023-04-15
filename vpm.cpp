@@ -52,15 +52,13 @@ std::tuple<double, double, double> Cross(std::tuple<double, double, double> a, s
 }
 
 
-std::tuple<double, double, double>* vpm::CalcDerivative(
+void vpm::CalcDerivative(
         Particle* Particles,
         double DomainL,
         double ParticleRadius,
-        double Viscosity) {
-
-    int N = sizeof(Particles) / sizeof(Particles[0]) ;
-    std::tuple<double, double, double> Out[N];
-
+        double Viscosity,
+        int N, 
+        std::tuple<double, double, double>* Out) {
 
     double ParticleRadius2 = ParticleRadius * ParticleRadius;
     double ParticleVol = ParticleRadius2 * M_PI;
@@ -71,14 +69,13 @@ std::tuple<double, double, double>* vpm::CalcDerivative(
     double ResultX, ResultY;
 
 
-#pragma acc parallel loop gang vector collapse(2) default(present) private( ThisParticle, OtherParticle, PeriodicDist, PeriodicDistanceX, PeriodicDistanceY, Vector1)
-    for (size_t i = 0; i < N; i++) {
-        
+#pragma acc parallel loop gang vector collapse(2) default(present) private( ThisParticle, OtherParticle, Vector1, PeriodicDistanceX, PeriodicDistanceY)
+    for (size_t i = 0; i < N; i++) {     
         for (size_t j = 0; j < N; j++) {
             
 
             if (i == j) continue;
-            Out[i] = std::make_tuple(0.0, 0.0, 0.0);
+            
             ThisParticle = Particles[i];
             OtherParticle = Particles[j];
 
@@ -98,13 +95,12 @@ std::tuple<double, double, double>* vpm::CalcDerivative(
         }
     }
 
-    return Out;
+    return ;
 }
 
-std::tuple<double, double> vpm::CalcVelAtPoint(double x, double y, std::vector<Particle> Particles,
-            double DomainL, double ParticleRadius) {
+std::tuple<double, double> vpm::CalcVelAtPoint(double x, double y, Particle* Particles,
+            double DomainL, double ParticleRadius, int N) {
 
-    size_t N = Particles.size();
     double ParticleRadius2 = ParticleRadius * ParticleRadius;
     double ParticleVol = ParticleRadius2 * M_PI;
 

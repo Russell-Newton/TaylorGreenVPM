@@ -21,13 +21,15 @@ namespace vpm {
         double Vorticity;
     };
 
-    std::tuple<double, double, double>* CalcDerivative(
+    void CalcDerivative(
             Particle* Particles,
             double DomainL,
             double ParticleRadius,
-            double Viscosity
+            double Viscosity,
+            int N,  
+            std::tuple<double, double, double>* Out
     );
 
-    std::tuple<double, double> CalcVelAtPoint(double x, double y, std::vector<Particle> Particles,
-            double DomainL, double ParticleRadius);
+    std::tuple<double, double> CalcVelAtPoint(double x, double y, Particle* Particles,
+            double DomainL, double ParticleRadius, int N);
 }

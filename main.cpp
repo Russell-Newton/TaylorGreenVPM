@@ -7,9 +7,10 @@
 #define MYSTERY_FRACTION 0.1
 #define PLOT 0
 
-/*
-void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, double ParticleRadius, size_t plotResolution) {
 
+void plotField(int timeStep, vpm::Particle* Particles, double L, double ParticleRadius, int N,  size_t plotResolution) {
+
+/*    
     std::ofstream outputVTK;
     outputVTK.open("vtk_out/vel_"+std::to_string(timeStep)+".vti");
 
@@ -24,7 +25,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
         {
             double xPoint = iX * L/plotResolution;
             double yPoint = iY * L/plotResolution;
-            std::tuple<double, double> velAtPoint = vpm::CalcVelAtPoint(xPoint, yPoint, Particles, L, ParticleRadius);
+            std::tuple<double, double> velAtPoint = vpm::CalcVelAtPoint(xPoint, yPoint, Particles, L, ParticleRadius, N);
             outputVTK <<  std::get<0>(velAtPoint) << " " << std::get<1>(velAtPoint) << std::endl;
         }
 
@@ -36,16 +37,20 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTK << " </ImageData>\n";
     outputVTK << "</VTKFile>\n";
 
+    outputVTK.close();
+
+
     std::ofstream outputVTP;
     outputVTP.open("vtk_out/particles_"+std::to_string(timeStep)+".vtp");
 
     outputVTP << "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
     outputVTP << " <PolyData>\n";
-    outputVTP << "  <Piece NumberOfPoints=\"" << Particles.size() << "\" NumberOfVerts=\"" << Particles.size() << "\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n"; 
+    outputVTP << "  <Piece NumberOfPoints=\"" << N << "\" NumberOfVerts=\"" << N << "\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n"; 
     outputVTP << "      <PointData>\n";
     outputVTP << "          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n";
 
-    for (vpm::Particle& part : Particles) {
+    for (int i = 0; i < N; i++) {
+        vpm::Particle part = Particles[i];
         outputVTP << std::get<0>(part.Velocity) << " " << std::get<1>(part.Velocity) << std::endl;
     }
 
@@ -56,7 +61,8 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "      <Points>\n";
     outputVTP << "          <DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
 
-    for (vpm::Particle& part : Particles) {
+    for (int i = 0; i < N; i++) {
+        vpm::Particle part = Particles[i];
         outputVTP << std::get<0>(part.Position) << " " << std::get<1>(part.Position) << " 0.0 " << std::endl;
     }
 
@@ -66,14 +72,14 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "      <Verts>\n";
     outputVTP << "          <DataArray type=\"Float64\" Name=\"connectivity\" format=\"ascii\" RangeMin=\"0\" RangeMax=\"0\">\n";
 
-    for (int i = 0; i < Particles.size(); i++) {
+    for (int i = 0; i < N; i++) {
         outputVTP << i << " " << std::endl;
     }
 
     outputVTP << "           </DataArray>\n";
-    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"" << Particles.size() << "\" RangeMax=\"" << Particles.size() << "\">\n";
+    outputVTP << "          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"" << N << "\" RangeMax=\"" << N << "\">\n";
 
-    for (int i = 0; i < Particles.size(); i++) {
+    for (int i = 0; i < N; i++) {
         outputVTP << i+1 << " " << std::endl;
     }
 
@@ -103,8 +109,10 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "  </Piece>\n";
     outputVTP << " </PolyData>\n";
     outputVTP << "</VTKFile>\n";
-}
 */
+    
+}
+
 
 int main() {
     // sim params
@@ -114,18 +122,25 @@ int main() {
     double Viscosity = 1E-2; // kinematic Viscosity m^2/s
     double dt = 1E-1;
     size_t nt = 100;
+    double dX, dY, dOmega;
+    int N = Resolution * Resolution;
 
-    #pragma acc enter data copyin(L, Viscosity)
-
-    size_t N = Resolution * Resolution;
     double ParticleRad = L / ResolutionDouble * 2;
     double ParticleVol = M_PI * ParticleRad * ParticleRad;
+
+
+    #pragma acc enter data copyin(L, Viscosity, ParticleRad, dt, N)
+
+    
     
     vpm::Particle Particles[N];
     #pragma acc enter data create(Particles[0:N])
 
+    std::tuple<double, double, double> Derivatives[N];
+    #pragma acc enter data create(Derivatives[0:N])
+
     // plot params
-    size_t PlotResolution = 16;
+   //size_t PlotResolution = 16;
 
     // Initialize Particles
     for (size_t i = 0; i < N; i++) {
@@ -135,39 +150,43 @@ int main() {
         double v = -std::sin(x) * std::cos(y);
         double omega = -2 * std::cos(x) * std::cos(y);
         Particles[i] = {std::make_tuple(x, y), std::make_tuple(u, v), omega * ParticleVol * MYSTERY_FRACTION};
+        Derivatives[i] = std::make_tuple(0.0, 0.0, 0.0);
     }
     #pragma acc update device(Particles[0:N])
+    #pragma acc update device(Derivatives[0:N])
 
     // plot
 
 #ifdef PLOT
-//    plotField(0, Particles, L, ParticleRad, PlotResolution);
+//    plotField(0, Particles, L, ParticleRad, N, PlotResolution);
 #endif
 
 
     for (size_t t = 1; t < nt; t++) {
-        auto Derivatives = vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity);
+        
+        vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity, N, Derivatives);
 
+        #pragma acc parallel loop gang vector default(present) private(dX, dY, dOmega)
         for (size_t i = 0; i < N; i++) {
-            vpm::Particle& Particle = Particles[i];
-            auto [dX, dY, dOmega] = Derivatives[i];
-            std::get<0>(Particle.Position) += dX * dt;
-            std::get<1>(Particle.Position) += dY * dt;
-            std::get<0>(Particle.Velocity) = dX;
-            std::get<1>(Particle.Velocity) = dY;
-            Particle.Vorticity += dOmega * dt;
 
-            if (std::get<0>(Particle.Position) < 0) {
-                std::get<0>(Particle.Position) += L;
+            std::make_tuple(dX, dY, dOmega) = Derivatives[i];
+            std::get<0>(Particles[i].Position) += dX * dt;
+            std::get<1>(Particles[i].Position) += dY * dt;
+            std::get<0>(Particles[i].Velocity) = dX;
+            std::get<1>(Particles[i].Velocity) = dY;
+            Particles[i].Vorticity += dOmega * dt;
+
+            if (std::get<0>(Particles[i].Position) < 0) {
+                std::get<0>(Particles[i].Position) += L;
             }
-            if (std::get<1>(Particle.Position) < 0) {
-                std::get<1>(Particle.Position) += L;
+            if (std::get<1>(Particles[i].Position) < 0) {
+                std::get<1>(Particles[i].Position) += L;
             }
-            if (std::get<0>(Particle.Position) > L) {
-                std::get<0>(Particle.Position) -= L;
+            if (std::get<0>(Particles[i].Position) > L) {
+                std::get<0>(Particles[i].Position) -= L;
             }
-            if (std::get<1>(Particle.Position) > L) {
-                std::get<1>(Particle.Position) -= L;
+            if (std::get<1>(Particles[i].Position) > L) {
+                std::get<1>(Particles[i].Position) -= L;
             }
         }
 
@@ -177,9 +196,12 @@ int main() {
 
 
 #ifdef PLOT
-//        plotField(t, Particles, L, 0.5, PlotResolution);
+//        plotField(t, Particles, L, 0.5, N,  PlotResolution);
 #endif
     }
 
+    #pragma acc exit data delete(Derivatives[0:N])
     #pragma acc exit data delete(Particles[0:N])
+    #pragma acc exit data delete(L, Viscosity, dt)
+
 }
