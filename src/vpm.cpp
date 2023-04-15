@@ -15,6 +15,7 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
     double ParticleRadius2 = ParticleRadius * ParticleRadius;
     double ParticleVol = ParticleRadius2 * M_PI;
 
+    static clock_t totalTime = 0;
     clock_t start = clock();
 
     for (size_t i = 0; i < N; i++) {
@@ -43,7 +44,9 @@ std::vector<std::tuple<double, double, double>> vpm::CalcDerivative(
 
     clock_t end = clock();
 
-    if (printTime) std::cout << "Time this step: " << static_cast<double>(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
+    totalTime += (end - start);
+
+    if (printTime) std::cout << "Time this step: " << static_cast<double>(end - start) / CLOCKS_PER_SEC << "s" << " Total time: " << static_cast<double>(totalTime) / CLOCKS_PER_SEC << "s" << std::endl;
 
     return Out;
 }

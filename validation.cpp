@@ -105,7 +105,7 @@ void plotField(int timeStep, std::vector<vpm::Particle> Particles, double L, dou
     outputVTP << "</VTKFile>\n";
 }
 
-void calcError(std::vector<vpm::Particle> ParticlesNBody, std::vector<vpm::Particle> Particles) {
+void calcError(int timeStep, std::vector<vpm::Particle> ParticlesNBody, std::vector<vpm::Particle> Particles) {
     static std::ofstream outCSV("error.csv");
     //compare particle locations
     double distanceError = 0.;
@@ -126,7 +126,7 @@ void calcError(std::vector<vpm::Particle> ParticlesNBody, std::vector<vpm::Parti
 
         vortError += abs(ParticleNBody.Vorticity - Particle.Vorticity);
     }
-    std::cout << distanceError << " " << velError << " " << vortError << std::endl;
+    std::cout << timeStep << " " << distanceError / Particles.size() << " " << velError / Particles.size() << " " << vortError / Particles.size() << std::endl;
 }
 
 int main() {
@@ -166,7 +166,7 @@ int main() {
 //     plotField(0, Particles, L, ParticleRad, PlotResolution);
 // #endif
 
-    calcError(ParticlesNBody, Particles);
+    calcError(0, ParticlesNBody, Particles);
 
     for (size_t t = 1; t < nt; t++) {
         auto Derivatives = vpm::CalcDerivativeTreeCode(Particles, L, ParticleRad, Viscosity, 0.2);
@@ -219,12 +219,12 @@ int main() {
             }
         }
 
-        std::cout << t << std::endl;
+        // std::cout << t << std::endl;
 // #ifdef PLOT
 //         plotField(t, Particles, L, 0.5, PlotResolution);
 // #endif
 
-    calcError(ParticlesNBody, Particles);
+    calcError(t, ParticlesNBody, Particles);
 
 
     }
