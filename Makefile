@@ -1,5 +1,5 @@
 CC = nvc++
-CFLAGS = -Wall -g -acc -Minfo=accel -std=c++17 
+CFLAGS = -Wall -O2 -acc -Minfo=accel -std=c++17 
   
 main: main.o vpm.o
 	$(CC) $(CFLAGS) -o main main.o vpm.o 
