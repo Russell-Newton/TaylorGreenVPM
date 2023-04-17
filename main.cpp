@@ -5,7 +5,11 @@
 #include <cmath>
 
 #define MYSTERY_FRACTION 0.1
-#define PLOT 1
+#define PLOT 0
+
+#include <chrono>
+using namespace std::chrono;
+
 
 
 void plotField(int timeStep, vpm::Particle* Particles, double L, double ParticleRadius, int N,  size_t plotResolution) {
@@ -19,7 +23,7 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
     fprintf(fp,"<VTKFile type=\"ImageData\" version=\"2.2\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
     fprintf(fp," <ImageData WholeExtent=\"0 %d 0 %d 0 0\" Origin=\"0 0 0\" Spacing=\" %f %f %f\">\n", plotResolution, plotResolution, L/plotResolution, L/plotResolution, L/plotResolution);
 
-    fprintf(fp, "  <Piece Extent=\"0 %d 0 %d 0 0\">\n", plotResolution, plotResolution);
+    fprintf(fp, "  <M_PIece Extent=\"0 %d 0 %d 0 0\">\n", plotResolution, plotResolution);
     fprintf(fp,"      <PointData>\n");
     fprintf(fp,"          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n");
 
@@ -36,7 +40,7 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
     fprintf(fp,  "      </PointData>\n");
     fprintf(fp, "      <CellData>\n");
     fprintf(fp, "      </CellData>\n");
-    fprintf(fp, "  </Piece>\n");
+    fprintf(fp, "  </M_PIece>\n");
     fprintf(fp, " </ImageData>\n");
     fprintf(fp, "</VTKFile>\n");
 
@@ -47,7 +51,7 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
 
     fprintf(fp,"<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
     fprintf(fp," <PolyData>\n");
-    fprintf(fp,"  <Piece NumberOfPoints=\"%d\" NumberOfVerts=\"%d\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n", N, N); 
+    fprintf(fp,"  <M_PIece NumberOfPoints=\"%d\" NumberOfVerts=\"%d\" NumberOfLines=\"0\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">\n", N, N); 
     fprintf(fp,"      <PointData>\n");
     fprintf(fp,"          <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"2\" format=\"ascii\">\n");
 
@@ -109,7 +113,7 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
     fprintf(fp,"          <DataArray type=\"Float64\" Name=\"offsets\" format=\"ascii\" RangeMin=\"1e+299\" RangeMax=\"-1e+299\">\n");
     fprintf(fp,"           </DataArray>\n");
     fprintf(fp,"      </Polys>\n");
-    fprintf(fp,"  </Piece>\n");
+    fprintf(fp,"  </M_PIece>\n");
     fprintf(fp," </PolyData>\n");
     fprintf(fp,"</VTKFile>\n");
 
@@ -123,30 +127,24 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
 int main() {
     // sim params
     double L = 2*3.14; // meters
-    size_t Resolution = 16; // initialize particles as 64*64 square grid
+    size_t Resolution = 30; // initialize particles as 64*64 square grid
     auto ResolutionDouble = static_cast<double>(Resolution);
     double Viscosity = 1E-2; // kinematic Viscosity m^2/s
     double dt = 1E-1;
     size_t nt = 100;
-    double dX, dY, dOmega;
     int N = Resolution * Resolution;
+
+
 
     double ParticleRad = L / ResolutionDouble * 2;
     double ParticleVol = 3.14 * ParticleRad * ParticleRad;
 
-
-    #pragma acc enter data copyin(L, Viscosity, ParticleRad, dt, N)
-
-   
     
     vpm::Particle Particles[N];
     #pragma acc enter data create(Particles[0:N])
 
-    std::tuple<double, double, double> Derivatives[N];
-    #pragma acc enter data create(Derivatives[0:N])
-
     // plot params
-   size_t PlotResolution = 16;
+   size_t PlotResolution = 30;
 
     // Initialize Particles
     for (size_t i = 0; i < N; i++) {
@@ -156,10 +154,8 @@ int main() {
         double v = -std::sin(x) * std::cos(y);
         double omega = -2 * std::cos(x) * std::cos(y);
         Particles[i] = {std::make_tuple(x, y), std::make_tuple(u, v), omega * ParticleVol * MYSTERY_FRACTION};
-        Derivatives[i] = std::make_tuple(0.0, 0.0, 0.0);
     }
     #pragma acc update device(Particles[0:N])
-    #pragma acc update device(Derivatives[0:N])
 
     
     // plot
@@ -168,54 +164,33 @@ int main() {
     plotField(0, Particles, L, ParticleRad, N, PlotResolution);
 #endif
 
+    
+    double time_sum = 0.0;
+    for (size_t t = 1; t <= nt; t++) {
 
-    for (size_t t = 1; t < nt; t++) {
-
-        vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity, N, Derivatives);
-
-
-        
-        #pragma acc parallel loop gang vector default(present) private(dX, dY, dOmega)
-        for (int i = 0; i < N; i++) {
-
-            dX = std::get<0>(Derivatives[i]);
-            dY = std::get<1>(Derivatives[i]);
-            dOmega = std::get<2>(Derivatives[i]);
-
-            std::get<0>(Particles[i].Position) += dX * dt;
-            std::get<1>(Particles[i].Position) += dY * dt;
-            std::get<0>(Particles[i].Velocity) = dX;
-            std::get<1>(Particles[i].Velocity) = dY;
-            Particles[i].Vorticity += dOmega * dt;
-
-            if (std::get<0>(Particles[i].Position) < 0) {
-                std::get<0>(Particles[i].Position) += L;
-            }
-            if (std::get<1>(Particles[i].Position) < 0) {
-                std::get<1>(Particles[i].Position) += L;
-            }
-            if (std::get<0>(Particles[i].Position) > L) {
-                std::get<0>(Particles[i].Position) -= L;
-            }
-            if (std::get<1>(Particles[i].Position) > L) {
-                std::get<1>(Particles[i].Position) -= L;
-            }
-        }
-        
-
+        auto start = high_resolution_clock::now();
+        vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity, N, dt);
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(stop - start);
+        time_sum +=  (double) duration.count();
 
         std::cout << t << std::endl;
-        
+
+        if(t % 10 == 0){
         #pragma acc update host(Particles[0:N])
-
-
+            
 #ifdef PLOT
        plotField(t, Particles, L, 0.5, N,  PlotResolution);
 #endif
+
+        }       
+
     }
 
-    #pragma acc exit data delete(Derivatives[0:N])
+    time_sum = time_sum / (1000*nt) ;
+
+    std::cout << "Time " << time_sum << std::endl;
+
     #pragma acc exit data delete(Particles[0:N])
-    #pragma acc exit data delete(L, Viscosity, dt)
 
 }

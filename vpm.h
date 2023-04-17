@@ -27,7 +27,7 @@ namespace vpm {
             double ParticleRadius,
             double Viscosity,
             int N,  
-            std::tuple<double, double, double>* Out
+            double dt
     );
 
     std::tuple<double, double> CalcVelAtPoint(double x, double y, Particle* Particles,
