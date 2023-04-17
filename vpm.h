@@ -22,7 +22,11 @@ namespace vpm {
     };
 
     void CalcDerivative(
-            Particle* Particles,
+            double * ParticleX,
+            double * ParticleY,
+            double * ParticleVort,
+            double * ParticleU,
+            double * ParticleV,
             double DomainL,
             double ParticleRadius,
             double Viscosity,

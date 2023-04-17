@@ -64,7 +64,11 @@ std::tuple<double, double, double> Cross(std::tuple<double, double, double> a, s
 
 
 void vpm::CalcDerivative(
-        Particle* Particles,
+        double * ParticleX,
+        double * ParticleY,
+        double * ParticleVort,
+        double * ParticleU,
+        double * ParticleV,
         double L,
         double ParticleRadius,
         double Viscosity,
@@ -83,8 +87,8 @@ void vpm::CalcDerivative(
         dY= 0.0;
         dOmega = 0.0;   
 
-        thisX = std::get<0>(Particles[i].Position);
-        thisY = std::get<1>(Particles[i].Position);
+        thisX = ParticleX[i];
+        thisY = ParticleY[i];
         
 #pragma acc loop gang vector default(present) private(OtherX, OtherY, PeriodicDistanceX, PeriodicDistanceY, PeriodicDist, Rho) reduction(+:dX) reduction(+:dY) reduction(+:dOmega)
         for (size_t j = 0; j < N; j++) {
@@ -94,8 +98,8 @@ void vpm::CalcDerivative(
             ParticleRadius2 = ParticleRadius * ParticleRadius;
             ParticleVol = ParticleRadius2 * M_PI;
 
-            OtherX = std::get<0>(Particles[j].Position);
-            OtherY = std::get<1>(Particles[j].Position);
+            OtherX = ParticleX[j];
+            OtherY = ParticleY[j];
 
             PeriodicDistanceX = std::fmod((thisX - OtherX + L / 2.0) + L, L) - L / 2;
             PeriodicDistanceY = std::fmod((thisY - OtherY + L / 2.0) + L, L) - L / 2;
@@ -103,33 +107,33 @@ void vpm::CalcDerivative(
             PeriodicDist = sqrt(PeriodicDistanceX * PeriodicDistanceX + PeriodicDistanceY * PeriodicDistanceY);
             Rho = PeriodicDist / ParticleRadius;
 
-            dX +=  (Kernel_acc(Rho) * PeriodicDistanceY / (PeriodicDist * PeriodicDist)) * Particles[j].Vorticity;
-            dY +=  (-Kernel_acc(Rho) * PeriodicDistanceX / (PeriodicDist * PeriodicDist)) * Particles[j].Vorticity;
+            dX +=  (Kernel_acc(Rho) * PeriodicDistanceY / (PeriodicDist * PeriodicDist)) * ParticleVort[j];
+            dY +=  (-Kernel_acc(Rho) * PeriodicDistanceX / (PeriodicDist * PeriodicDist)) * ParticleVort[j];
 
 
-            dOmega += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel_acc(Rho) * ParticleVol * (Particles[j].Vorticity - Particles[i].Vorticity);
+            dOmega += (2.0 * Viscosity / ParticleRadius2) * (1.0 / ParticleRadius2) * ViscousKernel_acc(Rho) * ParticleVol * (ParticleVort[j] - ParticleVort[i]);
         }
         
         //printf("print %d %f %f %f \n", i, dX, dY, dOmega);
 
-        std::get<0>(Particles[i].Position) += (-dX * dt);
-        std::get<1>(Particles[i].Position) += (-dY * dt);
-        std::get<0>(Particles[i].Velocity) = -dX;
-        std::get<1>(Particles[i].Velocity) = -dY;
-        Particles[i].Vorticity += dOmega * dt;
+        ParticleX[i] += (-dX * dt);
+        ParticleY[i] += (-dY * dt);
+        ParticleU[i] = -dX;
+        ParticleV[i] = -dY;
+        ParticleVort[i] += dOmega * dt;
 
         
-        if (std::get<0>(Particles[i].Position) < 0) {
-            std::get<0>(Particles[i].Position) += L;
+        if (ParticleX[i] < 0) {
+            ParticleX[i] += L;
         }
-        if (std::get<1>(Particles[i].Position) < 0) {
-            std::get<1>(Particles[i].Position) += L;
+        if (ParticleY[i] < 0) {
+            ParticleY[i] += L;
         }
-        if (std::get<0>(Particles[i].Position) > L) {
-            std::get<0>(Particles[i].Position) -= L;
+        if (ParticleX[i] > L) {
+            ParticleX[i] -= L;
         }
-        if (std::get<1>(Particles[i].Position) > L) {
-            std::get<1>(Particles[i].Position) -= L;
+        if (ParticleY[i] > L) {
+            ParticleY[i] -= L;
         }
     }
 

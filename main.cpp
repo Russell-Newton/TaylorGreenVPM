@@ -127,11 +127,11 @@ void plotField(int timeStep, vpm::Particle* Particles, double L, double Particle
 int main() {
     // sim params
     double L = 2*3.14; // meters
-    size_t Resolution = 30; // initialize particles as 64*64 square grid
+    size_t Resolution = 16; // initialize particles as 64*64 square grid
     auto ResolutionDouble = static_cast<double>(Resolution);
     double Viscosity = 1E-2; // kinematic Viscosity m^2/s
     double dt = 1E-1;
-    size_t nt = 100;
+    size_t nt = 25;
     int N = Resolution * Resolution;
 
 
@@ -141,10 +141,15 @@ int main() {
 
     
     vpm::Particle Particles[N];
-    #pragma acc enter data create(Particles[0:N])
+    double ParticleX[N];
+    double ParticleY[N];
+    double ParticleVort[N];
+    double ParticleU[N];
+    double ParticleV[N];
+    #pragma acc enter data create(ParticleX[0:N], ParticleY[0:N], ParticleVort[0:N], ParticleU[0:N], ParticleV[0:N])
 
     // plot params
-   size_t PlotResolution = 30;
+   size_t PlotResolution = 64;
 
     // Initialize Particles
     for (size_t i = 0; i < N; i++) {
@@ -154,14 +159,21 @@ int main() {
         double v = -std::sin(x) * std::cos(y);
         double omega = -2 * std::cos(x) * std::cos(y);
         Particles[i] = {std::make_tuple(x, y), std::make_tuple(u, v), omega * ParticleVol * MYSTERY_FRACTION};
+        ParticleX[i] = std::get<0>(Particles[i].Position);
+        ParticleY[i] = std::get<1>(Particles[i].Position);
+        ParticleU[i] = std::get<0>(Particles[i].Velocity);
+        ParticleV[i] = std::get<1>(Particles[i].Velocity);
+        ParticleVort[i] = Particles[i].Vorticity;
     }
-    #pragma acc update device(Particles[0:N])
+    #pragma acc update device(ParticleX[0:N], ParticleY[0:N], ParticleVort[0:N], ParticleU[0:N], ParticleV[0:N])
+
+
 
     
     // plot
 
 #ifdef PLOT
-    plotField(0, Particles, L, ParticleRad, N, PlotResolution);
+    //plotField(0, Particles, L, ParticleRad, N, PlotResolution);
 #endif
 
     
@@ -169,7 +181,7 @@ int main() {
     for (size_t t = 1; t <= nt; t++) {
 
         auto start = high_resolution_clock::now();
-        vpm::CalcDerivative(Particles, L, ParticleRad, Viscosity, N, dt);
+        vpm::CalcDerivative(ParticleX, ParticleY, ParticleVort, ParticleU, ParticleV, L, ParticleRad, Viscosity, N, dt);
         auto stop = high_resolution_clock::now();
         auto duration = duration_cast<microseconds>(stop - start);
         time_sum +=  (double) duration.count();
@@ -177,10 +189,18 @@ int main() {
         std::cout << t << std::endl;
 
         if(t % 10 == 0){
-        #pragma acc update host(Particles[0:N])
+        #pragma acc update host(ParticleX[0:N], ParticleY[0:N], ParticleVort[0:N], ParticleU[0:N], ParticleV[0:N])
+
+            for (size_t i = 0; i < N; i++) {
+                std::get<0>(Particles[i].Position) = ParticleX[i];
+                std::get<1>(Particles[i].Position) = ParticleY[i];
+                std::get<0>(Particles[i].Velocity) = ParticleU[i];
+                std::get<1>(Particles[i].Velocity) = ParticleV[i];
+                Particles[i].Vorticity = ParticleVort[i] ;
+            }
             
 #ifdef PLOT
-       plotField(t, Particles, L, 0.5, N,  PlotResolution);
+       //plotField(t, Particles, L, 0.5, N,  PlotResolution);
 #endif
 
         }       
