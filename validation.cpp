@@ -1,9 +1,9 @@
 #include <cmath>
 #include <iostream>
-#include <ranges>
+// #include <ranges>
 #include "vpm.h"
 #include <fstream>
-#include "treecode.h"
+// #include "treecode.h"
 
 #define MYSTERY_FRACTION 0.1
 #define PLOT 0

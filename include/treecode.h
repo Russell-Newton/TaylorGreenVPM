@@ -27,6 +27,14 @@ namespace vpm {
         }
     };
 
+    struct BoxNodeGPU {
+        size_t particlesInThisBox[400];
+        Particle particle;
+        size_t numParticlesInThisBox  = 0;
+
+    };
+
+
     std::vector<std::tuple<double, double, double>> CalcDerivativeTreeCode(
             std::vector<Particle> Particles,
             double DomainL,
@@ -34,4 +42,15 @@ namespace vpm {
             double Viscosity,
             double OpeningAngle = 0.5
     );
+
+    void CalcDerivativeGPUTree(
+        BoxNodeGPU * boxNodes,
+        Particle* Particles,
+        double DomainL,
+        double ParticleRadius,
+        double Viscosity,
+        int N, 
+        int numNodes,
+        double OpeningAngle,
+        std::tuple<double, double, double>* Out);
 }
